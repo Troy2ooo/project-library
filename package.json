@@ -4,11 +4,9 @@
   "description": "\"Онлайн библиотека\".",
   "main": "test.js",
   "scripts": {
-    "test": "jest --watch",
-    "start": "node dist/index.js",
-    "start:dev": "nodemon --exec ts-node src/index.js",
-    "build": "tsc"
-
+    "build": "tsc",
+    "start:prod": "node dist/index.js",
+    "start:dev": "nodemon --exec ts-node index.ts"
   },
   "repository": {
     "type": "git",
@@ -33,9 +31,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
-    "@types/express": "^5.0.3",
+    "@types/express": "^5.0.4",
     "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.8.1",
+    "@types/pg": "^8.15.6",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
     "eslint": "^9.37.0",
     "eslint-plugin-jsdoc": "^61.1.0",
     "eslint-plugin-n": "^17.23.1",
@@ -43,7 +45,10 @@
     "globals": "^16.4.0",
     "jest": "^30.2.0",
     "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
+    "ts-migrate": "^0.1.35",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

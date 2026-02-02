@@ -1,13 +1,23 @@
 {
+  "include": ["src", "index.ts", "db.ts"],
   "compilerOptions": {
-    "target": "ES6",
-    "module": "commonjs",
+    "target": "ES2021",
+    "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "module": "commonjs",
+    "lib": ["es2020"],
+    "allowJs": true,
+    "checkJs": false,
     "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "baseUrl": "./",
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "esModuleInterop": true,
-    "skipLibCheck": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node"
+  }
 }

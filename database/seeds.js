@@ -124,6 +124,16 @@ async function seedData() {
       ON CONFLICT DO NOTHING;
     `);
 
+    // -------------------- refresh_tokens --------------------
+ await db.query(`
+      CREATE TABLE refresh_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMP NOT NULL`
+    );
+
+
     console.log('✅ Все seed-данные успешно добавлены!');
   } catch (err) {
     console.error('❌ Ошибка при заполнении данными:', err);

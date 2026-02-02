@@ -1,15 +1,21 @@
+import { pool } from '../../db';
+
 /**
  * @module AuthorsModel
  * Модуль для работы с таблицей `authors` в базе данных.
- * 
+ *
  * Содержит функции для:
  * - получения всех авторов,
  * - получения одного автора по ID,
  * - создания нового автора,
  * - удаления автора по ID.
  */
-const pool = require('../../db');
 
+type Author = {
+  id: number;
+  name: string;
+  bio: string;
+};
 
 /**
  * Получает всех авторов из базы данных.
@@ -19,13 +25,13 @@ const pool = require('../../db');
  * @returns {Promise<Object[]>} Массив объектов авторов.
  * @throws {Error} Если произошла ошибка при выполнении SQL-запроса.
  */
-async function getAllAuthors() {
-  const query = 'SELECT * FROM authors';
-  const result = await pool.query(query);
 
-  return result.rows;
+async function getAll(): Promise<Author[]> {
+  const query: string = 'SELECT * FROM authors';
+  const { rows } = await pool.query<Author>(query);
+
+  return rows;
 }
-
 
 /**
  * Получает одного автора по ID.
@@ -36,14 +42,13 @@ async function getAllAuthors() {
  * @returns {Promise<Object>} Объект автора.
  * @throws {Error} Если произошла ошибка при выполнении SQL-запроса.
  */
-async function getOneAuthor(authorId) {
-  const query = 'SELECT * FROM authors WHERE id = $1;';
+async function getOneById(authorId: number): Promise<Author> {
+  const query: string = 'SELECT * FROM authors WHERE id = $1;';
   const value = [authorId];
-  const result = await pool.query(query, value);
+  const { rows } = await pool.query(query, value);
 
-  return result.rows[0];
+  return rows[0] as Author;
 }
-
 
 /**
  * Создает нового автора.
@@ -55,14 +60,14 @@ async function getOneAuthor(authorId) {
  * @returns {Promise<Object>} Объект созданного автора.
  * @throws {Error} Если произошла ошибка при создании автора.
  */
-async function createAuthor(authorName, authorBio) {
-  const query = 'INSERT INTO authors (name, bio) values ($1, $2) RETURNING * ;';
+
+async function create(authorName: string, authorBio: string): Promise<Author> {
+  const query: string = 'INSERT INTO authors (name, bio) values ($1, $2) RETURNING * ;';
   const values = [authorName, authorBio];
-  const result = await pool.query(query, values);
+  const { rows } = await pool.query<Author>(query, values);
 
-  return result.rows[0];
+  return rows[0];
 }
-
 
 /**
  * Удаляет автора по ID.
@@ -73,12 +78,13 @@ async function createAuthor(authorName, authorBio) {
  * @returns {Promise<Object>} Объект удаленного автора.
  * @throws {Error} Если произошла ошибка при удалении автора.
  */
-async function deleteAuthor(authorId) {
-  const query = 'DELETE FROM authors WHERE id = $1  RETURNING *';
-  const values = [authorId];
-  const result = await pool.query(query, values);
 
-  return result.rows[0];
+async function remove(authorId: number): Promise<number> {
+  const query: string = 'DELETE FROM authors WHERE id = $1  RETURNING *';
+  const values = [authorId];
+  const { rows } = await pool.query<Author>(query, values);
+
+  return rows[0].id;
 }
 
-module.exports = { getAllAuthors, getOneAuthor, createAuthor, deleteAuthor };
+export { getAll, getOneById, create, remove };

@@ -5,7 +5,6 @@ const config = {
   singleQuote: true,
   bracketSameLine: true,
   semi: true,
-  importOrderSeparation: true,
 };
 
 module.exports = config;

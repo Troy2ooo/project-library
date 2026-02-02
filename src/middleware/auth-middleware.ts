@@ -1,5 +1,10 @@
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+const JWT_SECRET: string = process.env.JWT_SECRET || 'dev_secret';
+
+type AuthenticatedRequest = Request & {
+  user?: JwtPayload & { id: number; username: string; role: string };
+}
 
 /**
  * @file Middleware для аутентификации пользователей по JWT.
@@ -26,8 +31,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
  * res.json({ user: req.user });
  * });
  */
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
+function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
 
   if (!authHeader) {
     return res.status(401).json({ error: 'No authorization header' });
@@ -40,16 +45,18 @@ function authenticateToken(req, res, next) {
   }
 
   const token = parts[1];
+
   jwt.verify(token, JWT_SECRET, (err, payload) => {
     if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' })
-  }
-    req.user = payload; // { id, username, role }
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    req.user = payload as AuthenticatedRequest['user'];
+
     next();
   });
 }
-
-module.exports = { authenticateToken };
+export { authenticateToken };
 
 
 

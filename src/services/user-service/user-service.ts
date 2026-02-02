@@ -1,7 +1,11 @@
+import { Request, Response } from 'express';
+import { updateMail, update, remove, getAll, create, getOneById, getOneByName } from '../../models/user-model';
+import bcrypt from 'bcryptjs';
+
 /**
  * @module UserService
  * Сервисный модуль для работы с пользователями.
- * 
+ *
  * Содержит функции для:
  * - получение всех пользователей,
  * - получение одного пользователя по ID,
@@ -10,9 +14,27 @@
  * - обновление информации пользователя,
  * - обновление электронной почты пользователя.
  */
-const bcrypt = require('bcryptjs');
-const userModel = require('../../models/user-model');
 
+type User = {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+};
+
+type UserCreateRequestDto = {
+  userName: string;
+  email: string;
+  password: string;
+  role: string;
+};
+
+type UserUpdateRequestDto = Omit<UserCreateRequestDto, 'password' | 'role'>;
+
+type UpdateUserMailRequestDto = {
+  userId: number;
+  newMail: string;
+};
 /**
  * Получает всех пользователей.
  *
@@ -23,29 +45,28 @@ const userModel = require('../../models/user-model');
  * @returns {Promise<void>} Отправляет JSON с массивом пользователей.
  * @throws {Error} Если произошла ошибка при выполнении запроса к базе данных.
  */
-async function getAllUsers(req, res) {
+async function getAllUsers(req: Request, res: Response): Promise<void> {
   try {
-    const users = await userModel.getAllUsers();
+    const users = await getAll();
     // Метод .map():
     // проходит по каждому элементу массива;
     // применяет к нему функцию, которую ты передаёшь;
     // возвращает новый массив с результатами этой функции.
-    const usersData = users.map(user => ({
+    const usersData = users.map((user: User) => ({
       id: user.id,
       name: user.username,
       mail: user.email,
-      role: user.role
+      role: user.role,
     }));
 
     res.json({
       message: 'Here we go, all users!',
-      usersData
+      usersData,
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Error getting all users', error: error.message });
   }
-};
-
+}
 
 /**
  * Получает одного пользователя по ID.
@@ -57,23 +78,43 @@ async function getAllUsers(req, res) {
  * @returns {Promise<void>} Отправляет JSON с данными пользователя.
  * @throws {Error} Если произошла ошибка при выполнении запроса к базе данных.
  */
-async function getOneUser(req, res) {
-  const userId = req.params.id;
+
+// Express всегда передаёт параметры в строковом виде, даже если это числа в URL.
+// То есть Express никогда не даст тебе number внутри req.params.
+// Поэтому правильное решение — сначала принять как string, потом привести к number
+
+async function getOneUser(req: Request, res: Response): Promise<void> {
+  const userId = Number(req.params.id);
+
   try {
     console.log(userId);
-    const user = await userModel.getUser(userId);
-    res.json({ message: 'Here we go user',
+
+    const user = await getOneById(userId);
+
+    res.json({
+      message: 'Here we go user',
       userData: {
         id: user.id,
-      name: user.username,
-      mail: user.email,
-      role: user.role }
+        name: user.username,
+        mail: user.email,
+        role: user.role,
+      },
     });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Error getting user', error: error.message });
   }
-};
+}
 
+type AuthenticatedRequest = Request & {
+  // пересечение типов (&) подобно extends для interface
+  user?: {
+    //? потому что свойство user может быть, а может отсутствовать в объекте req
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+  };
+};
 
 /**
  * Создает нового пользователя.
@@ -85,12 +126,13 @@ async function getOneUser(req, res) {
  * @returns {Promise<void>} Отправляет JSON с данными созданного пользователя.
  * @throws {Error} Если произошла ошибка при создании пользователя или нарушении уникальности.
  */
-async function createUser(req, res) {
+async function createUser(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const { name, mail, password, role } = req.body;
+    const { userName, email, password, role } = req.body as UserCreateRequestDto;
 
-    if (!name || !mail || !password) {
-      return res.status(400).json({ message: 'Name, mail, and password are required' });
+    if (!userName || !email || !password) {
+      res.status(400).json({ message: 'Name, mail, and password are required' });
+      return;
     }
 
     // число “раундов” соли (или “сложность” хэширования).
@@ -108,25 +150,25 @@ async function createUser(req, res) {
       if (req.user && req.user.role === 'admin') {
         userRole = 'admin'; // админ может создать другого админа
       } else {
-        return res.status(403).json({ error: 'Only admins can assign the admin role' });
+        res.status(403).json({ error: 'Only admins can assign the admin role' });
+        return;
       }
     }
-    const newUser = await userModel.createUser(name, mail, password_hash, userRole);
+    const newUser = await create(userName, email, password_hash, userRole);
     res.status(201).json({
       message: 'User created successfully',
       user: {
         id: newUser.id,
-        name: newUser.name,
-        mail: newUser.mail,
+        name: newUser.username,
+        mail: newUser.email,
         role: newUser.role,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating user:', error);
     res.status(500).json({ message: 'Error creating user', error: error.message });
   }
 }
-
 
 /**
  * Удаляет пользователя по ID.
@@ -138,16 +180,16 @@ async function createUser(req, res) {
  * @returns {Promise<void>} Отправляет JSON с данными удаленного пользователя.
  * @throws {Error} Если произошла ошибка при удалении пользователя.
  */
-async function deleteUser(req, res) {
-  const userId = req.params.id;
+async function deleteUser(req: Request, res: Response): Promise<void> {
+  const userId: number = Number(req.params.id);
   try {
-    const deletedUser = await userModel.deleteUser(userId);
+    const deletedUser = await remove(userId);
     if (deletedUser) {
       res.json({ message: 'User deleted successfully', user: deletedUser });
     } else {
       res.status(404).json({ message: 'User not found' });
     }
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: 'Error deleting user', error: error.message });
   }
 }
@@ -162,43 +204,46 @@ async function deleteUser(req, res) {
  * @returns {Promise<void>} Отправляет JSON с обновленными данными пользователя.
  * @throws {Error} Если произошла ошибка при обновлении.
  */
-//донастроить http
-async function updateUser(req, res) {
+
+async function updateUser(req: Request, res: Response): Promise<void> {
   try {
-    const { userName, email } = req.body;
-    const userId = req.params.id
+    const { userName, email } = req.body as UserUpdateRequestDto;
+    const userId = Number(req.params.id);
 
     console.log(req.params);
     console.log({ userId, userName, email });
 
     if (!userId) {
-      return res.status(400).json({ message: 'userId is required' });
+      res.status(400).json({ message: 'userId is required' });
+      return;
     }
 
     // Создаем объект только с полями, которые пришли
-    const fieldsToUpdate = {};
+    const fieldsToUpdate: UserUpdateRequestDto = { userName: '', email: '' };
 
     if (userName) {
-      fieldsToUpdate.username = userName
-    };
-
-    if (email) {
-      fieldsToUpdate.email = email
-    };
-
-    const result = await userModel.updateUser(userId, fieldsToUpdate);
-
-    if (!result) {
-      return res.status(404).json({ message: 'User not found or nothing to update' });
+      fieldsToUpdate.userName = userName;
     }
 
-    res.status(200).json({ message: 'User updated successfully', user: result });
-  } catch (error) {
+    if (email) {
+      fieldsToUpdate.email = email;
+    }
+
+    const updatedUser = await update(userId, fieldsToUpdate);
+
+    if (!updatedUser) {
+      res.status(404).json({ message: 'User not found or nothing to update' });
+      return;
+    }
+
+    const { password_hash, created_at, updated_at, ...userData } = updatedUser;
+
+    res.status(200).json({ message: 'User updated successfully', user: userData });
+  } catch (error: any) {
     console.error('Error updating user:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-};
-
+}
 
 /**
  * Обновляет email пользователя.
@@ -210,20 +255,27 @@ async function updateUser(req, res) {
  * @returns {Promise<void>} Отправляет JSON с обновленным email пользователя.
  * @throws {Error} Если произошла ошибка при обновлении email.
  */
-async function updateUserMail(req, res) {
+async function updateUserMail(req: Request, res: Response) {
+  if (!req.body) {
+    console.log('Paramets are reqiered');
+    res.status(400).json({ message: 'Paramets are reqiered' });
+    return;
+  }
+
   try {
-    const { userId, newMail } = req.body;
-    const result = await userModel.updateUserMailById(newMail, userId);
+    const body: UpdateUserMailRequestDto = req.body;
+    const { userId, newMail } = body;
+    const result = await updateMail(newMail, userId);
 
     if (result) {
       res.status(200).json({ message: 'User email updated', user: result });
     } else {
       res.status(404).json({ message: 'User not found' });
     }
-  } catch (err) {
-    console.error('Error updating user name:', err);
+  } catch (error: any) {
+    console.error('Error updating user name:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 }
 
-module.exports = { getAllUsers, getOneUser, createUser, deleteUser, updateUser, updateUserMail };
+export { getAllUsers, getOneUser, createUser, deleteUser, updateUser, updateUserMail };
