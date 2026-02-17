@@ -26,7 +26,11 @@ type Debtor = {
 async function getAllDeb( ) {
     try {
     const query: string =    
-    'SELECT bl.user_id, u.username, u.email, b.title, bl.taken_at FROM book_loans bl JOIN users u ON u.id = bl.user_id JOIN books b ON b.id = bl.book_id WHERE bl.returned_at IS NULL';
+    `SELECT bl.user_id, u.username, u.email, b.title, bl.taken_at 
+    FROM book_loans bl 
+    JOIN users u ON u.id = bl.user_id 
+    JOIN books b ON b.id = bl.book_id 
+    WHERE bl.returned_at IS NULL`;
     const result = await pool.query(query); 
 
     return result.rows as Debtor [];
@@ -41,7 +45,13 @@ async function getOneByName(username: string): Promise<Debtor | null> {
     if (!username) {
         throw new Error ("Username is required"); 
     }
-    const query: string = 'SELECT u.username, u.email, b.title, bl.taken_at FROM book_loans bl JOIN users u ON u.id = bl.user_id JOIN books b ON b.id = bl.book_id WHERE u.username = $1 AND bl.returned_at IS NULL'; 
+    const query: string = 
+    `SELECT u.username, u.email, b.title, bl.taken_at 
+    FROM book_loans bl 
+    JOIN users u ON u.id = bl.user_id 
+    JOIN books b ON b.id = bl.book_id 
+    WHERE u.username = $1 
+    AND bl.returned_at IS NULL`; 
     const value = [ username ];
     
     try {
@@ -61,7 +71,12 @@ async function getOneByName(username: string): Promise<Debtor | null> {
 
 async function getAllUnavailable( ) {
     try {
-  const query: string = 'SELECT u.id, u.username, u.email, bl.taken_at, b.title FROM book_loans bl JOIN users u ON u.id = bl.user_id JOIN books b ON b.id = bl.book_id WHERE bl.returned_at IS NULL';
+  const query: string = 
+  `SELECT u.id, u.username, u.email, bl.book_id, bl.taken_at, b.title 
+    FROM book_loans bl 
+    JOIN users u ON u.id = bl.user_id 
+    JOIN books b ON b.id = bl.book_id 
+    WHERE bl.returned_at IS NULL`;
   const result = await pool.query(query);
 
   return result.rows;
@@ -75,7 +90,15 @@ async function getAllUnavailable( ) {
 
 async function getAllAvailable ( ) {
     try {
-  const query: string = 'SELECT * FROM books WHERE available = true';
+  const query: string = 
+  `SELECT *
+    FROM books b
+    WHERE NOT EXISTS (
+    SELECT 1
+    FROM book_loans bl
+    WHERE bl.book_id = b.id
+    AND bl.returned_at IS NULL
+      )`;
   const result = await pool.query(query);
 
   return result.rows;
@@ -89,7 +112,13 @@ async function getAllAvailable ( ) {
 
  async function getTop( ) {
     try {
-    const query: string = 'SELECT u.id AS user_id, u.username, COUNT(bl.book_id) AS books_taken FROM users u JOIN book_loans bl ON bl.user_id = u.id GROUP BY u.id, u.username ORDER BY books_taken DESC LIMIT 5;'
+    const query: string = 
+    `SELECT u.id AS user_id, u.username, 
+    COUNT(bl.book_id) AS books_taken 
+    FROM users u 
+    JOIN book_loans bl ON bl.user_id = u.id 
+    GROUP BY u.id, u.username 
+    ORDER BY books_taken DESC LIMIT 5;`
     const result = await pool.query(query);
     return result.rows;
 }

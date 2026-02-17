@@ -1,11 +1,10 @@
 import { Request, Response } from "express";
-import { getAll,
+import { getAllBooksWithStatus,
   getAllWithAuthors,
   getOneById,
   getOneWithAuthorById,
   create,
-  remove,
-  updateStatus } from '../../models/book-model'
+  remove } from '../../models/book-model'
 
 /**
  * @module BookService
@@ -24,7 +23,6 @@ import { getAll,
 type BookCreateRequestDto = {
   title: string;
   description: string;
-  available: boolean;
 }
 
 
@@ -38,17 +36,20 @@ type BookCreateRequestDto = {
  * @returns {Promise<void>} Отправляет JSON с массивом всех книг.
  * @throws {Error} Если произошла ошибка при получении книг.
  */
+// async function getAllBooks(req: Request, res: Response) {
+//   try {
+//     const books = await getAll();
+
+//     res.json(books);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error getting books', error: error.message });
+//   }
+// }
+
 async function getAllBooks(req: Request, res: Response) {
-  try {
-    const books = await getAll();
-
-    res.json(books);
-  } catch (error) {
-    // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
-    res.status(500).json({ message: 'Error getting books', error: error.message });
-  }
-}
-
+  const books = await getAllBooksWithStatus();
+  res.json(books);
+};
 
 /**
  * Получает все книги с их авторами.
@@ -105,8 +106,13 @@ async function getBookById(req: any, res: any) {
  * @throws {Error} Если книга не найдена или произошла ошибка сервера.
  */
 async function getBookWithAuthor(req: Request, res: Response) {
+  const bookId = Number (req.params.id);
+  
+  if (Number.isNaN(bookId)) {
+    return res.status(400).json({ error: 'Некорректный id книги' });
+  }
+
   try {
-    const bookId = req.params.id;
     const book = await getOneWithAuthorById(bookId);
 
     if (!book) {
@@ -118,7 +124,7 @@ async function getBookWithAuthor(req: Request, res: Response) {
     console.error('Ошибка при получении книги:', error);
     res.status(500).json({ error: 'Ошибка при получении книги' });
   }
-}
+};
 
 
 /**
@@ -126,7 +132,7 @@ async function getBookWithAuthor(req: Request, res: Response) {
  *
  * @async
  * @function createBook
- * @param {import('express').Request} req - req.body содержит { title, description, available }.
+ * @param {import('express').Request} req - req.body содержит { title, description }.
  * @param {import('express').Response} res - - Объект ответа Express.
  * @returns {Promise<void>} Отправляет JSON с объектом созданной книги.
  * @throws {Error} Если произошла ошибка при создании книги.
@@ -134,12 +140,11 @@ async function getBookWithAuthor(req: Request, res: Response) {
 async function createBook(req: Request, res: Response) {
   const book: BookCreateRequestDto = {
     title: req.body.title,
-    description: req.body.description,
-    available: req.body.available ? req.body.available : true,
+    description: req.body.description
   };
 
   try {
-    const newBook = await create(book.title, book.description, book.available);
+    const newBook = await create(book.title, book.description);
 
     res.json({ message: 'Book created successfully', book: newBook });
   } catch (error: any) {
@@ -171,40 +176,40 @@ async function deleteBook(req: Request, res: Response) {
 
 
 
-/**
- * Обновляет статус доступности книги по ID.
- *
- * @async
- * @function updateBookStatus
- * @param {import('express').Request} req - req.params.id содержит ID книги, req.body.available содержит true/false.
- * @param {import('express').Response} res - Объект ответа Express.
- * @returns {Promise<void>} Отправляет JSON с обновленным объектом книги.
- * @throws {Error} Если произошла ошибка при обновлении книги.
- */
-async function updateBookStatus(req: Request, res: Response) {
-  try {
-    const bookId: number = Number(req.params.id);
-    const { available } = req.body as { available: boolean };
+// /**
+//  * Обновляет статус доступности книги по ID.
+//  *
+//  * @async
+//  * @function updateBookStatus
+//  * @param {import('express').Request} req - req.params.id содержит ID книги, req.body.available содержит true/false.
+//  * @param {import('express').Response} res - Объект ответа Express.
+//  * @returns {Promise<void>} Отправляет JSON с обновленным объектом книги.
+//  * @throws {Error} Если произошла ошибка при обновлении книги.
+//  */
+// async function updateBookStatus(req: Request, res: Response) {
+//   try {
+//     const bookId: number = Number(req.params.id);
+//     const { available } = req.body as { available: boolean };
 
-    if (typeof available !== 'boolean') {
-      return res.status(400).json({ error: 'available must be a boolean (true/false)' });
-    }
+//     if (typeof available !== 'boolean') {
+//       return res.status(400).json({ error: 'available must be a boolean (true/false)' });
+//     }
 
-    const updatedBook = await updateStatus(bookId, available);
+//     const updatedBook = await updateStatus(bookId, available);
 
-    if (!updatedBook) {
-      return res.status(404).json({ error: 'Book not found' });
-    }
+//     if (!updatedBook) {
+//       return res.status(404).json({ error: 'Book not found' });
+//     }
 
-    res.json({
-      message: `Book ${bookId} status updated successfully`,
-      book: updatedBook,
-    });
-  } catch (error) {
-    console.error('updateBookStatus error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-}
+//     res.json({
+//       message: `Book ${bookId} status updated successfully`,
+//       book: updatedBook,
+//     });
+//   } catch (error) {
+//     console.error('updateBookStatus error:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// }
 
 export {
   getAllBooks,
@@ -213,5 +218,4 @@ export {
   getBookWithAuthor,
   createBook,
   deleteBook,
-  updateBookStatus,
 };

@@ -77,17 +77,33 @@ async function getOneLoanById(loanId: number) {
  * @returns {Promise<BookLoan>} Объект с данными о созданной записи займа.
  * @throws {Error} Если произошла ошибка при добавлении записи.
  */
+//old
+// async function checkoutBook(bookId: number, userId: number) {
+//   const query: string = `
+//     INSERT INTO book_loans (book_id, user_id, taken_at)
+//     VALUES ($1, $2, NOW())
+//     RETURNING *;
+//   `;
+//   const values = [bookId, userId];
+//   const result = await pool.query(query, values);
 
-async function checkoutBook(bookId: number, userId: number) {
-  const query: string = `
+//   return result.rows[0] as Loan;
+// }
+
+async function createLoan(bookId: number, userId: number) {
+  const query = `
     INSERT INTO book_loans (book_id, user_id, taken_at)
-    VALUES ($1, $2, NOW())
+    SELECT $1, $2, NOW()
+    WHERE NOT EXISTS (
+      SELECT 1 FROM book_loans
+      WHERE book_id = $1
+      AND returned_at IS NULL
+    )
     RETURNING *;
   `;
-  const values = [bookId, userId];
-  const result = await pool.query(query, values);
 
-  return result.rows[0] as Loan;
+  const result = await pool.query(query, [bookId, userId]);
+  return result.rows[0] || null;
 }
 
 
@@ -101,18 +117,34 @@ async function checkoutBook(bookId: number, userId: number) {
  * @returns {Promise<BookLoan>} Обновлённая запись займа с датой возврата.
  * @throws {Error} Если запись не найдена или книга уже была возвращена.
  */
+//old
+// async function turnBackBook(bookId: number, userId: number) {
+//   const query: string = `
+//     UPDATE book_loans
+//     SET returned_at = NOW()
+//     WHERE book_id = $1 AND user_id = $2 AND returned_at IS NULL
+//     RETURNING *;
+//   `;
+//   const values = [bookId, userId];
+//   const result = await pool.query(query, values);
 
-async function turnBackBook(bookId: number, userId: number) {
-  const query: string = `
+//   return result.rows[0] as Loan;
+// };
+
+//new
+
+async function closeLoan(bookId: number, userId: number) {
+  const query = `
     UPDATE book_loans
     SET returned_at = NOW()
-    WHERE book_id = $1 AND user_id = $2 AND returned_at IS NULL
+    WHERE book_id = $1
+      AND user_id = $2
+      AND returned_at IS NULL
     RETURNING *;
   `;
-  const values = [bookId, userId];
-  const result = await pool.query(query, values);
 
-  return result.rows[0] as Loan;
-}
+  const result = await pool.query(query, [bookId, userId]);
+  return result.rows[0] || null;
+};
 
-export { getAll, getOneLoanById, checkoutBook, turnBackBook };
+export { getAll, getOneLoanById, createLoan, closeLoan };

@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.get('/', getAllLoans);
 router.get('/:id', getLoan);
-router.post('/:id', authenticateToken, checkoutBook); 
-router.patch('/:id', authenticateToken, returnBook);
+router.post('/:id/checkout', authenticateToken, checkoutBook); 
+router.post('/:id/return', authenticateToken, returnBook);
 
 export default router;
