@@ -5,6 +5,7 @@ import probeRoutes  from './src/routes/probe-routes/probe-routes';
 import booksRoutes from './src/routes/book-routes/book-routes';
 import authorsRoutes from'./src/routes/authors-routes/authors-routes';
 import loansRoutes from'./src/routes/book-routes/book-loans-routes';
+import statisticRoutes from './src/routes/statistic-routes/statistic-routes';
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -22,6 +23,7 @@ app.use('/books', booksRoutes);
 app.use('/authors', authorsRoutes);
 app.use('/books-loans', loansRoutes);
 app.use('/auth', authRoutes);
+app.use('/statistic', statisticRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

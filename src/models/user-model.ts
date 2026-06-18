@@ -48,7 +48,7 @@ type User = {
  * @throws {Error} Если произошла ошибка при выполнении SQL-запроса.
  */
 async function getAll() {
-  const query = 'SELECT * FROM users';
+  const query: string = 'SELECT * FROM users';
   const result = await pool.query(query);
   return result.rows as User [];
 };
@@ -69,7 +69,7 @@ async function getOneById(userId: number) {
   const result = await pool.query(query, value);
 
   return result.rows[0] as User || null;
-}
+};
 
 
 /**
@@ -88,6 +88,7 @@ async function getOneByName(username: string) {
     const result = await pool.query(query, values);
     
     return result.rows[0] as User || null; // null, если пользователь не найден
+    
   } catch (err:any) {
     console.error('getUserByName error:', err);
     throw new Error('Database query error');

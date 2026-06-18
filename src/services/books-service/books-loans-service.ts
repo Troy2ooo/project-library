@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import {
   getOneLoanById,
-  turnBackBook, 
+  createLoan,
+  closeLoan, 
   getAll
 } from '../../models/book-loans-model';
 
-import { getOneById, updateStatus, 
+import { getOneById, 
 } from '../../models/book-model';
 
 
@@ -65,7 +66,7 @@ async function getLoan(req: Request, res: Response): Promise<void> {
 
 
 /**
- * Выдает книгу пользователю (checkout).
+ * Выдает книгу пользователю (checkout) тем самым создавая займ.
  *
  * @async
  * @function checkoutBook
@@ -81,26 +82,52 @@ async function getLoan(req: Request, res: Response): Promise<void> {
  * @param req
  * @param res
  */
-async function checkoutBook(req: Request, res: Response): Promise<void> {
-  const bookId = Number (req.params.id);
+//old
+// async function checkoutBook(req: Request, res: Response): Promise<void> {
+//   const bookId = Number (req.params.id);
   
-  try {
-    // Проверим, доступна ли книга
-    const book = await getOneById(bookId);
-    if (!book) {
-      res.status(404).json({ error: 'Book not found' });
-      return 
-    };
-    if (!book.available) {
+//   try {
+//     // Проверим, доступна ли книга
+//     const book = await getOneById(bookId);
+//     if (!book) {
+//       res.status(404).json({ error: 'Book not found' });
+//       return 
+//     };
+//     if (!book.available) {
       
-      res.status(400).json({ error: 'Book is not available' });
-      return
-    };
-    // Обновляем статус книги
-    await updateStatus (bookId, false);
+//       res.status(400).json({ error: 'Book is not available' });
+//       return
+//     };
+//     // Обновляем статус книги
+//     await updateStatus (bookId, false);
+//     res.status(201).json({
+//       message: 'Book checked out successfully'});
+//   } catch (error:any) {
+//     console.error('checkoutBook error:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
+
+//new
+async function checkoutBook(req: Request, res: Response) {
+  const bookId = Number(req.params.id);
+  const userId = Number(req.body.user_id);
+
+  try {
+    const loan = await createLoan(bookId, userId);
+
+    if (!loan) {
+      return res.status(400).json({
+        error: 'Book is already borrowed',
+      });
+    }
+
     res.status(201).json({
-      message: 'Book checked out successfully'});
-  } catch (error:any) {
+      message: 'Book checked out successfully',
+      loan,
+    });
+
+  } catch (error) {
     console.error('checkoutBook error:', error);
     res.status(500).json({ error: 'Server error' });
   }
@@ -117,36 +144,62 @@ async function checkoutBook(req: Request, res: Response): Promise<void> {
  * @returns {Promise<void>} Отправляет JSON с объектом возврата займа.
  * @throws {Error} Если не найден активный заем или произошла ошибка сервера.
  */
-async function returnBook(req: Request, res: Response): Promise<void> {
-  const bookId = Number (req.params.id);
-  const userId = Number (req.body.user_id);
+
+//old
+// async function returnBook(req: Request, res: Response): Promise<void> {
+//   const bookId = Number (req.params.id);
+//   const userId = Number (req.body.user_id);
+
+//   try {
+//     const book = await getOneById (bookId);
+//     if (!book) {
+//       res.status(404).json({ error: 'Book not found' })
+//       return
+//     };
+//     // Проверим, есть ли незакрытый loan
+//     const loan = await turnBackBook(bookId, userId);
+//     if (!loan) {
+//       res.status(400).json({ error: 'No active loan found for this user/book' });
+//       return
+//     }
+
+//     // Обновляем статус книги
+//     await updateStatus(bookId, true);
+
+//     res.json({
+//       message: 'Book returned successfully',
+//       loan,
+//     });
+//   } catch (error:any) {
+//     console.error('returnBook error:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
+
+//new
+async function returnBook(req: Request, res: Response) {
+  const bookId = Number(req.params.id);
+  const userId = Number(req.body.user_id);
 
   try {
-    const book = await getOneById (bookId);
-    if (!book) {
-      res.status(404).json({ error: 'Book not found' })
-      return
-    };
-    // Проверим, есть ли незакрытый loan
-    const loan = await turnBackBook(bookId, userId);
-    if (!loan) {
-      res.status(400).json({ error: 'No active loan found for this user/book' });
-      return
-    }
+    const loan = await closeLoan(bookId, userId);
 
-    // Обновляем статус книги
-    await updateStatus(bookId, true);
+    if (!loan) {
+      return res.status(400).json({
+        error: 'No active loan found for this user/book',
+      });
+    }
 
     res.json({
       message: 'Book returned successfully',
       loan,
     });
-  } catch (error:any) {
+
+  } catch (error) {
     console.error('returnBook error:', error);
     res.status(500).json({ error: 'Server error' });
   }
-}
-
+};
 
 
 export { getAllLoans, getLoan, checkoutBook, returnBook };

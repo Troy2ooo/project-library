@@ -6,8 +6,7 @@ import {
     getBookById,
     getBookWithAuthor,
     createBook,
-    deleteBook,
-    updateBookStatus 
+    deleteBook, 
 } from '../../services/books-service/books-service';
 
 const router = express.Router();
@@ -18,6 +17,5 @@ router.get('/', getAllBooks);
 router.get('/:id', getBookById);
 router.post('/', createBook);
 router.delete('/:id', deleteBook);
-router.put('/:id/status', updateBookStatus);
 
 export default router;
